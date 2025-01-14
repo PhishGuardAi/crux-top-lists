@@ -5,9 +5,18 @@ on:
 jobs:
   download-bigquery-agg:
     runs-on: ubuntu-latest
+    timeout-minutes: 360  # Extended timeout for larger dataset
     steps:
       - id: "checkout"
         uses: "actions/checkout@v3"
+        with:
+          lfs: true  # Enable Git LFS for large files
+      - id: "git-config"
+        run: |
+          git config --global http.postBuffer 524288000
+          git config --global core.compression 9
+          git config --global http.lowSpeedLimit 1000
+          git config --global http.lowSpeedTime 300
       - id: "python"
         uses: actions/setup-python@v4
         with:
