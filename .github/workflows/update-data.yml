@@ -11,19 +11,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 360  # Extended timeout for larger dataset
     steps:
-      - name: Install Git LFS
-        run: |
-          sudo apt-get install git-lfs
-          git lfs install
       - id: "checkout"
         uses: "actions/checkout@v3"
         with:
-          lfs: true  # Enable Git LFS for large files
           token: ${{ secrets.GITHUB_TOKEN }}  # Explicitly use GITHUB_TOKEN
-      - name: Configure Git LFS
+      - name: Configure Git
         run: |
-          git lfs track "*.csv.zip"
-          git add .gitattributes
           git config --global http.postBuffer 524288000
           git config --global core.compression 9
           git config --global http.lowSpeedLimit 1000
