@@ -5,7 +5,7 @@ import dateutil
 from dateutil import rrule
 import dateutil.relativedelta as relativedelta
 import datetime
-import gzip
+import zipfile
 import shutil
 
 from google.cloud import bigquery
@@ -95,13 +95,12 @@ class CrUXRepoManager:
         if not os.path.exists(self._country_directory):
             os.mkdir(self._country_directory)
 
-    def _gzip(self, filename, delete_original=True):
-        with open(filename, 'rb') as f_in:
-            gzipped_filename = filename + ".gz"
-            with gzip.open(gzipped_filename, 'wb') as f_out:
-                shutil.copyfileobj(f_in, f_out)
+    def _zip(self, filename, delete_original=True):
+        zip_filename = filename + ".zip"
+        with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            zipf.write(filename, os.path.basename(filename))
         if delete_original:
-           os.remove(filename)
+            os.remove(filename)
 
     def download(self, credentials_path=None, credentials_json=None, credentials_env=False):
         downloader = CrUXDownloader(
@@ -118,12 +117,12 @@ class CrUXRepoManager:
                 filename = str(yyyymm) + ".csv"
                 results_path = os.path.join(data_directory, filename)
                 if downloader.dump_month_to_csv(scope, yyyymm, results_path):
-                    self._gzip(results_path)
+                    self._zip(results_path)
 
     def update_current(self, dest):
         # Global Only right now
         latest = max(self._get_existing_YYYYMM(self._global_directory))
-        latest_filename = str(latest[0]) + str(latest[1]).zfill(2) + ".csv.gz"
+        latest_filename = str(latest[0]) + str(latest[1]).zfill(2) + ".csv.zip"
         src_path = os.path.join(self._global_directory, latest_filename)
         assert(os.path.exists(src_path))
         dst_path = os.path.join(self._global_directory, dest)
