@@ -2,6 +2,10 @@ name: Update Data Repo
 on:
   workflow_call:
   workflow_dispatch:
+
+permissions:
+  contents: write  # Add explicit permission to write repository contents
+
 jobs:
   download-bigquery-agg:
     runs-on: ubuntu-latest
@@ -11,6 +15,7 @@ jobs:
         uses: "actions/checkout@v3"
         with:
           lfs: true  # Enable Git LFS for large files
+          token: ${{ secrets.GITHUB_TOKEN }}  # Explicitly use GITHUB_TOKEN
       - id: "git-config"
         run: |
           git config --global http.postBuffer 524288000
