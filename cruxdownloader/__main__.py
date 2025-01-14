@@ -8,7 +8,6 @@ def main(directory, credentials_path):
     mgr = CrUXRepoManager(directory)
     credentials_env = None if credentials_path else True
     mgr.download(credentials_path, credentials_env=credentials_env)
-    mgr.update_current("current.csv.zip")
 
 
 if __name__ == "__main__":

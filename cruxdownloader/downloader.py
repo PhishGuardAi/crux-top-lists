@@ -93,6 +93,16 @@ class CrUXRepoManager:
         if delete_original:
             os.remove(filename)
 
+    def _clean_existing_files(self, base_filename):
+        # Remove any existing CSV and ZIP files
+        csv_path = os.path.join(self._global_directory, base_filename)
+        zip_path = os.path.splitext(csv_path)[0] + ".zip"
+        
+        if os.path.exists(csv_path):
+            os.remove(csv_path)
+        if os.path.exists(zip_path):
+            os.remove(zip_path)
+
     def download(self, credentials_path=None, credentials_json=None, credentials_env=False):
         downloader = CrUXDownloader(
             credentials_path=credentials_path,
@@ -105,11 +115,14 @@ class CrUXRepoManager:
         year, month = self._get_latest_YYYYMM()
         yyyymm = int(f"{year}{str(month).zfill(2)}")
         
+        # Clean up existing files
+        self._clean_existing_files(self.GLOBAL_FILENAME)
+        
         # Download global data
         print("Fetching global data for {}".format(yyyymm))
         results_path = os.path.join(self._global_directory, self.GLOBAL_FILENAME)
         if downloader.dump_month_to_csv("global", yyyymm, results_path):
-            self._zip(results_path)
+            self._zip(results_path, delete_original=True)  # Ensure we delete the CSV after zipping
 
         # TODO: Add country-specific data if needed
         # for scope in {"global", "country"}:
