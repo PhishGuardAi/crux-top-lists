@@ -58,6 +58,7 @@ class CrUXRepoManager:
     MIN_YYYYMM = datetime.datetime(2021, 2, 1)
     GLOBAL_DIR_NAME = "global"
     COUNTRY_DIR_NAME = "country"
+    GLOBAL_FILENAME = "crux-top-10m.csv"
 
     @classmethod
     def _iter_valid_YYYYMM(cls):
@@ -74,20 +75,10 @@ class CrUXRepoManager:
         self._country_directory = os.path.join(data_directory,
                 self.COUNTRY_DIR_NAME)
 
-    def _get_existing_YYYYMM(self, path):
-        for f in os.listdir(path):
-            if not f.startswith("2"):
-                continue
-            yield int(f[0:4]), int(f[4:6])
-
-    def _to_fetch_YYYYMM(self, path):
-        valid = set(self._iter_valid_YYYYMM())
-        existing = set(self._get_existing_YYYYMM(path))
-        for dt in valid - existing:
-            mm = str(dt[1])
-            if len(mm) == 1:
-                mm = "0" + mm
-            yield int(str(dt[0]) + mm)
+    def _get_latest_YYYYMM(self):
+        now = datetime.datetime.now()
+        last_month = now + relativedelta.relativedelta(months=-1)
+        return (last_month.year, last_month.month)
 
     def _make_directories(self):
         if not os.path.exists(self._global_directory):
@@ -96,7 +87,7 @@ class CrUXRepoManager:
             os.mkdir(self._country_directory)
 
     def _zip(self, filename, delete_original=True):
-        zip_filename = filename + ".zip"
+        zip_filename = os.path.splitext(filename)[0] + ".zip"
         with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
             zipf.write(filename, os.path.basename(filename))
         if delete_original:
@@ -109,22 +100,18 @@ class CrUXRepoManager:
             credentials_env=credentials_env,
         )
         self._make_directories()
-        for scope in {"global",}:
-        #for scope in {"global", "country"}:
-            data_directory = self._global_directory if scope == "global" else self._country_directory
-            for yyyymm in self._to_fetch_YYYYMM(data_directory):
-                print("Fetching {} {}".format(scope, yyyymm))
-                filename = str(yyyymm) + ".csv"
-                results_path = os.path.join(data_directory, filename)
-                if downloader.dump_month_to_csv(scope, yyyymm, results_path):
-                    self._zip(results_path)
+        
+        # Get the latest month's data
+        year, month = self._get_latest_YYYYMM()
+        yyyymm = int(f"{year}{str(month).zfill(2)}")
+        
+        # Download global data
+        print("Fetching global data for {}".format(yyyymm))
+        results_path = os.path.join(self._global_directory, self.GLOBAL_FILENAME)
+        if downloader.dump_month_to_csv("global", yyyymm, results_path):
+            self._zip(results_path)
 
-    def update_current(self, dest):
-        # Global Only right now
-        latest = max(self._get_existing_YYYYMM(self._global_directory))
-        latest_filename = str(latest[0]) + str(latest[1]).zfill(2) + ".csv.zip"
-        src_path = os.path.join(self._global_directory, latest_filename)
-        assert(os.path.exists(src_path))
-        dst_path = os.path.join(self._global_directory, dest)
-        shutil.copyfile(src_path, dst_path)
+        # TODO: Add country-specific data if needed
+        # for scope in {"global", "country"}:
+        #    data_directory = self._global_directory if scope == "global" else self._country_directory
 
