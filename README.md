@@ -4,6 +4,9 @@
 
 This repository caches a CSV version of the Chrome websites list, queried from the public CrUX data in Google BigQuery. You can browse all of the cached lists [here](https://github.com/zakird/crux-top-lists/tree/main/data/global).
 
+The most up-to-date global websites list can be downloaded directly at:
+https://raw.githubusercontent.com/PhishGuardAi/crux-top-lists/main/data/global/current.csv.gz.
+
 ### Data Structure
 
 The CrUX dataset has several important characteristics:
