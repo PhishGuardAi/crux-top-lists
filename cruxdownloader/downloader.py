@@ -1,12 +1,10 @@
 import json
-import sys
 import os
-import dateutil
 from dateutil import rrule
 import dateutil.relativedelta as relativedelta
 import datetime
 import zipfile
-import shutil
+import tldextract
 
 from google.cloud import bigquery
 from google.oauth2 import service_account
@@ -16,13 +14,13 @@ class CrUXDownloader:
 
     GLOBAL_SQL = """SELECT distinct origin, experimental.popularity.rank
         FROM `chrome-ux-report.experimental.global`
-        WHERE yyyymm = ? AND experimental.popularity.rank <= 10000000
+        WHERE yyyymm = ?
         GROUP BY origin, experimental.popularity.rank
         ORDER BY experimental.popularity.rank;"""
 
     COUNTRY_SQL = """SELECT distinct country_code, origin, experimental.popularity.rank
         FROM `chrome-ux-report.experimental.country`
-        WHERE yyyymm = ? AND experimental.popularity.rank <= 10000000
+        WHERE yyyymm = ?
         GROUP BY country_code, origin, experimental.popularity.rank
         ORDER BY country_code, experimental.popularity.rank;"""
 
@@ -38,6 +36,11 @@ class CrUXDownloader:
         else:
             self._bq_client = bigquery.Client.from_service_account_json(credentials_path)
 
+    def _extract_domain(self, url):
+        # Extract domain and suffix using tldextract
+        ext = tldextract.extract(url)
+        return f"{ext.domain}.{ext.suffix}"
+
     def dump_month_to_csv(self, scope, yyyymm: int, path):
         assert scope in {"global", "country"}
         query = self.GLOBAL_SQL if scope == "global" else self.COUNTRY_SQL
@@ -49,7 +52,15 @@ class CrUXDownloader:
         df = self._bq_client.query(query, job_config=job_config).to_dataframe()
         if df.empty:
             return
-        df.to_csv(path, index=False, header=True)
+
+        # Process URLs to extract domains
+        df['domain'] = df['origin'].apply(lambda x: self._extract_domain(x))
+        
+        # Drop duplicates keeping the highest rank (lowest number)
+        df = df.sort_values('rank').drop_duplicates(subset='domain', keep='first')
+        
+        # Save only domain and rank
+        df[['domain', 'rank']].to_csv(path, index=False, header=True)
         return path
 
 

@@ -21,7 +21,8 @@ dependencies = [
 	"python-dateutil",
 	"pandas",
 	"pyarrow",
-	"db-dtypes"
+	"db-dtypes",
+	"tldextract"
 ]
 
 [tool.hatch.build.targets.wheel]
