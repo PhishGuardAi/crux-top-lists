@@ -49,18 +49,26 @@ class CrUXDownloader:
                 bigquery.ScalarQueryParameter(None, "INT64", yyyymm),
             ]
         )
+        print("Querying data...")
         df = self._bq_client.query(query, job_config=job_config).to_dataframe()
         if df.empty:
             return
 
+        print("Processing domains...")
         # Process URLs to extract domains
         df['domain'] = df['origin'].apply(lambda x: self._extract_domain(x))
         
         # Drop duplicates keeping the highest rank (lowest number)
         df = df.sort_values('rank').drop_duplicates(subset='domain', keep='first')
+        df = df[['domain', 'rank']]  # Keep only needed columns
         
-        # Save only domain and rank
-        df[['domain', 'rank']].to_csv(path, index=False, header=True)
+        # Limit to top 10M domains
+        if len(df) > 10_000_000:
+            df = df.head(10_000_000)
+            print("Limiting to top 10 million domains")
+        
+        print(f"Saving {len(df):,} unique domains...")
+        df.to_csv(path, index=False, header=True)
         return path
 
 
